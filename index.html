@@ -7,15 +7,14 @@
 body{font-family:'Segoe UI',sans-serif;background:#000;color:#fff;padding:15px;line-height:1.5}
 .container{max-width:650px;margin:0 auto}
 button,input,select{width:100%;padding:14px;border:none;border-radius:12px;margin:8px 0;box-sizing:border-box}
-button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;transition:0.2s}
-button:hover{background:#1d4ed8}
+button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer}
 input,select{background:#111;color:#fff;border:1px solid #333}
 .card{background:#111;padding:16px;border-radius:16px;margin:12px 0;border:1px solid #222}
 .tag{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;text-transform:uppercase;margin-bottom:8px;display:inline-block}
 .tag-mgt{background:#1e3a8a;color:#60a5fa}
 .tag-results{background:#581c87;color:#d8b4fe}
 .tag-special{background:#14532d;color:#bef264}
-.ch-name{color:#888; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:1px}
+.ch-name{color:#888; font-size:11px; font-weight:bold; text-transform:uppercase}
 .title{margin:5px 0 12px 0; font-size:15px; font-weight:500; color:#eee}
 a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px;border:1px solid #4da6ff;padding:6px 12px;border-radius:8px;display:inline-block}
 </style>
@@ -24,7 +23,7 @@ a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px;border:1px 
 
 <div class="container">
     <h2>📈 India Corporate Tracker</h2>
-    <div style="font-size:12px; color:#666; margin-bottom:15px">CEO • CFO • MD • Earnings • Special Segments</div>
+    <div style="font-size:12px; color:#666; margin-bottom:15px">Broad Window Scanning for Maximum Coverage</div>
 
     <input id="apikey" type="password" placeholder="Paste YouTube API Key">
     
@@ -44,20 +43,12 @@ const channels = [
     { name: "ET NOW Swadesh", id: "UC9p6_Ksq7_K75W-V9S0M-pA" }
 ];
 
-// Expanded Executive Roles and Segment Names
-const executiveRoles = [
+// Maximum possible keyword inclusion
+const allKeywords = [
     "ceo", "cfo", "md", "chairman", "director", "founder", "promoter", 
-    "executive", "president", "vp", "chief", "manager", "head of"
-];
-
-const corporateEvents = [
     "management", "interaction", "interview", "results", "earnings", 
-    "q1", "q2", "q3", "q4", "guidance", "concall", "outlook", "briefing"
-];
-
-const specialSegments = [
-    "know your company", "all about my company", "corporate radar", 
-    "corporate room", "talking point", "market masters"
+    "q1", "q2", "q3", "q4", "guidance", "concall", "outlook",
+    "know your company", "all about my company", "corporate radar"
 ];
 
 document.getElementById('searchDate').valueAsDate = new Date();
@@ -68,15 +59,22 @@ async function runScan() {
     if(!key) { alert("API Key Required"); return; }
 
     const resDiv = document.getElementById("results");
-    resDiv.innerHTML = "Scanning for Executives and Corporate Actions...";
+    resDiv.innerHTML = "Scanning all formats with 48-hour buffer...";
 
-    const start = new Date(dateStr); start.setHours(0,0,0,0);
-    const end = new Date(dateStr); end.setHours(23,59,59,999);
+    // Fixed Timezone Handling: 
+    // We scan 12 hours BEFORE the start of the date and 12 hours AFTER the end.
+    // This catches everything regardless of UTC/IST shifts.
+    const baseDate = new Date(dateStr);
+    
+    const start = new Date(baseDate);
+    start.setHours(start.getHours() - 12);
+    
+    const end = new Date(baseDate);
+    end.setHours(end.getHours() + 36);
 
     let allVideos = [];
 
     for (let c of channels) {
-        // Fetching 50 results to ensure we don't miss buried interviews
         let url = `https://www.googleapis.com/youtube/v3/search?key=${key}&channelId=${c.id}&part=snippet&order=date&maxResults=50&publishedAfter=${start.toISOString()}&publishedBefore=${end.toISOString()}`;
 
         try {
@@ -87,17 +85,17 @@ async function runScan() {
                 data.items.forEach(item => {
                     let title = item.snippet.title.toLowerCase();
                     
-                    // Regex helps find whole words only (prevents 'm' in 'market' triggering 'md')
-                    const hasRole = executiveRoles.some(role => new RegExp(`\\b${role}\\b`).test(title));
-                    const hasEvent = corporateEvents.some(evt => title.includes(evt));
-                    const hasSpec = specialSegments.some(seg => title.includes(seg));
+                    // Simple, broad matching
+                    const isRelevant = allKeywords.some(w => title.includes(w));
 
-                    if (hasRole || hasEvent || hasSpec) {
+                    if (isRelevant) {
+                        // Intelligent tagging
                         let cat = "Management Interview";
                         let cls = "tag-mgt";
 
-                        if(hasSpec) { cat = "Special Segment"; cls = "tag-special"; }
-                        else if(title.includes("q1") || title.includes("q2") || title.includes("q3") || title.includes("q4") || title.includes("results")) {
+                        if(title.includes("know your company") || title.includes("all about my company")) {
+                            cat = "Special Segment"; cls = "tag-special";
+                        } else if(title.match(/q[1-4]/) || title.includes("results")) {
                             cat = "Earnings/Results"; cls = "tag-results";
                         }
 
@@ -116,10 +114,12 @@ async function runScan() {
 
     let html = "";
     if (allVideos.length === 0) {
-        html = "<p style='color:#666; font-size:13px; text-align:center;'>No corporate content found for this date.</p>";
+        html = "<p style='color:#666; font-size:13px; text-align:center;'>No matching interviews found.</p>";
     } else {
-        // Sort alphabetically by channel then category
-        allVideos.forEach(v => {
+        // Use a Map to remove duplicates that might occur due to the 48-hour window
+        const uniqueVideos = Array.from(new Map(allVideos.map(v => [v.link, v])).values());
+        
+        uniqueVideos.forEach(v => {
             html += `
             <div class="card">
                 <span class="ch-name">${v.channel}</span><br>
