@@ -2,18 +2,17 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>India Corporate Tracker: Direct Feed</title>
+<title>India Corporate Smart Tracker</title>
 <style>
-body{font-family:'Segoe UI',sans-serif;background:#000;color:#fff;padding:15px;line-height:1.5}
+body{font-family:'Segoe UI',sans-serif;background:#000;color:#fff;padding:15px}
 .container{max-width:650px;margin:0 auto}
 button,input,select{width:100%;padding:14px;border:none;border-radius:12px;margin:8px 0;box-sizing:border-box}
 button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer}
 input,select{background:#111;color:#fff;border:1px solid #333}
 .card{background:#111;padding:16px;border-radius:16px;margin:12px 0;border:1px solid #222}
 .tag{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;text-transform:uppercase;margin-bottom:8px;display:inline-block}
-.tag-mgt{background:#1e3a8a;color:#60a5fa}
-.tag-results{background:#581c87;color:#d8b4fe}
-.tag-special{background:#14532d;color:#bef264}
+.tag-target{background:#1e3a8a;color:#60a5fa} /* Interviews/Results */
+.tag-segment{background:#14532d;color:#bef264} /* KYC/Special */
 .ch-name{color:#888; font-size:11px; font-weight:bold; text-transform:uppercase}
 .title{margin:5px 0 12px 0; font-size:15px; font-weight:500; color:#eee}
 a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px;border:1px solid #4da6ff;padding:6px 12px;border-radius:8px;display:inline-block}
@@ -23,20 +22,19 @@ a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px;border:1px 
 
 <div class="container">
     <h2>📈 India Corporate Tracker</h2>
-    <div style="font-size:12px; color:#666; margin-bottom:15px">Direct Upload Feed (Instant Sync)</div>
+    <div style="font-size:12px; color:#666; margin-bottom:15px">CEO • CFO • MD • Specific Stock Actions</div>
 
     <input id="apikey" type="password" placeholder="Paste YouTube API Key">
     
     <label style="font-size:12px; color:#888">Select Search Date:</label>
     <input type="date" id="searchDate">
 
-    <button onclick="runScan()">Refresh Live Feed</button>
+    <button onclick="runScan()">Scan All Critical Content</button>
 
     <div id="results"></div>
 </div>
 
 <script>
-// "UU" IDs pull the direct upload playlist, bypasses search index lag.
 const channels = [
     { name: "CNBC-TV18", pId: "UU_glS8p_mCid6AnA6V75AJA" },
     { name: "ET NOW", pId: "UUI_mwTKUhicNzFrhm33MzBQ" },
@@ -44,12 +42,11 @@ const channels = [
     { name: "ET NOW Swadesh", pId: "UU9p6_Ksq7_K75W-V9S0M-pA" }
 ];
 
-// Broad category triggers
-const triggers = [
-    "ceo", "cfo", "md", "chairman", "management", "interaction", 
-    "interview", "results", "earnings", "guidance", "q1", "q2", "q3", "q4",
-    "know your company", "all about my company", "corporate radar"
-];
+// Keywords we WANT (Company-specific and Executive-specific)
+const goodWords = ["ceo", "cfo", "md", "chairman", "director", "management", "results", "earnings", "guidance", "q1", "q2", "q3", "q4", "know your company", "all about my company", "concall", "interaction"];
+
+// Keywords we DON'T want (Generic news bulletins that hide specific interviews)
+const badWords = ["business news", "top news", "market news", "closing bell", "opening bell", "daily news", "news bulletin", "headlines"];
 
 document.getElementById('searchDate').valueAsDate = new Date();
 
@@ -59,12 +56,11 @@ async function runScan() {
     if(!key) { alert("API Key Required"); return; }
 
     const resDiv = document.getElementById("results");
-    resDiv.innerHTML = "Pulling direct channel archives...";
+    resDiv.innerHTML = "Performing Metadata Filtering...";
 
     let allVideos = [];
 
     for (let c of channels) {
-        // playlistItems is 100% accurate and chronological
         let url = `https://www.googleapis.com/youtube/v3/playlistItems?key=${key}&playlistId=${c.pId}&part=snippet&maxResults=50`;
 
         try {
@@ -74,36 +70,31 @@ async function runScan() {
             if (data.items) {
                 data.items.forEach(item => {
                     let title = item.snippet.title.toLowerCase();
-                    // Extract date string YYYY-MM-DD from publishedAt
-                    let pubDate = item.snippet.publishedAt.substring(0, 10); 
+                    let pubDate = item.snippet.publishedAt.substring(0, 10);
                     
-                    // Logic: Match Date AND any broad corporate keyword
-                    if (pubDate === dateStr && triggers.some(t => title.includes(t))) {
-                        let cat = "Management Interview";
-                        let cls = "tag-mgt";
+                    const isDateMatch = (pubDate === dateStr);
+                    const hasGoodWord = goodWords.some(w => title.includes(w));
+                    const hasBadWord = badWords.some(w => title.includes(w));
 
-                        if(title.includes("know your company") || title.includes("all about my company")) {
-                            cat = "Special Segment"; cls = "tag-special";
-                        } else if(title.match(/q[1-4]/) || title.includes("results")) {
-                            cat = "Earnings/Results"; cls = "tag-results";
-                        }
-
+                    // Keep if: Correct Date AND (Has a target word) AND (Does NOT have a generic news word)
+                    if (isDateMatch && hasGoodWord && !hasBadWord) {
+                        let isSpec = title.includes("know your company") || title.includes("all about my company");
                         allVideos.push({
                             channel: c.name,
                             title: item.snippet.title,
-                            category: cat,
-                            tagClass: cls,
+                            category: isSpec ? "Special Segment" : "Management/Results",
+                            tagClass: isSpec ? "tag-segment" : "tag-target",
                             link: `https://youtube.com/watch?v=${item.snippet.resourceId.videoId}`
                         });
                     }
                 });
             }
-        } catch (e) { console.error("Error fetching " + c.name); }
+        } catch (e) { console.error(e); }
     }
 
     let html = "";
     if (allVideos.length === 0) {
-        html = "<p style='color:#666; font-size:13px; text-align:center;'>No matching corporate videos found for this date.</p>";
+        html = "<p style='color:#666; font-size:13px; text-align:center;'>No specific company content found for this date.</p>";
     } else {
         allVideos.forEach(v => {
             html += `
