@@ -2,73 +2,67 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>India Management Tracker Pro</title>
+<title>India Corporate Tracker</title>
 <style>
-body{font-family:'Segoe UI',Arial;background:#000;color:#fff;padding:15px;line-height:1.4}
-.container{max-width:600px;margin:0 auto}
-button,input,select{width:100%;padding:14px;border:none;border-radius:12px;margin:8px 0;box-sizing:border-box;font-size:16px}
+body{font-family:'Segoe UI',sans-serif;background:#000;color:#fff;padding:15px}
+.container{max-width:650px;margin:0 auto}
+button,input,select{width:100%;padding:14px;border:none;border-radius:12px;margin:8px 0;box-sizing:border-box}
 button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer}
-input,select{background:#1a1a1a;color:#fff;border:1px solid #333}
+input,select{background:#111;color:#fff;border:1px solid #333}
 .card{background:#111;padding:16px;border-radius:16px;margin:12px 0;border:1px solid #222}
-.small{color:#888;font-size:12px}
-.ch-tag{color:#4da6ff; font-size:11px; font-weight:bold; text-transform:uppercase}
-.title{margin:8px 0; font-size:15px; font-weight:500}
-a{color:#4da6ff;text-decoration:none;font-weight:bold;display:inline-block;margin-top:10px}
-label{font-size:12px;color:#aaa;margin-left:5px}
+.tag-mgt{background:#1e3a8a;color:#60a5fa;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;text-transform:uppercase}
+.tag-kyc{background:#365314;color:#bef264;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;text-transform:uppercase}
+.ch-name{color:#888; font-size:12px; font-weight:bold}
+.title{margin:10px 0; font-size:15px; font-weight:500; color:#eee}
+a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px}
 </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📈 India Management Tracker</h2>
-    <p class="small">CNBC-TV18 • ET NOW • NDTV PROFIT</p>
+    <h2>🏢 India Corporate Tracker</h2>
+    <div style="font-size:12px; color:#666; margin-bottom:15px">Capturing Management, Know Your Company, & Earnings</div>
 
     <input id="apikey" type="password" placeholder="Paste YouTube API Key">
     
-    <label>Select Upload Date:</label>
+    <label style="font-size:12px; color:#888">Select Search Date:</label>
     <input type="date" id="searchDate">
 
-    <button onclick="runScan()">Search Management Interviews</button>
+    <button onclick="runScan()">Scan All Formats</button>
 
     <div id="results"></div>
 </div>
 
 <script>
-// Verified Channel IDs for Indian Business News
 const channels = [
-    { name: "CNBC-TV18 (India)", id: "UC_glS8p_mCid6AnA6V75AJA" },
+    { name: "CNBC-TV18", id: "UC_glS8p_mCid6AnA6V75AJA" },
     { name: "ET NOW", id: "UCI_mwTKUhicNzFrhm33MzBQ" },
     { name: "NDTV Profit", id: "UC3uJIdRFTGgLWrUziaHbzrg" },
     { name: "ET NOW Swadesh", id: "UC9p6_Ksq7_K75W-V9S0M-pA" }
 ];
 
-// Keywords to ensure we catch relevant corporate content
-const goodWords = ["management", "ceo", "cfo", "md", "chairman", "earnings", "results", "guidance", "concall", "outlook", "interview", "quarter"];
+// Refined keywords for Indian Business segment naming conventions
+const mgtWords = ["management", "ceo", "cfo", "md", "chairman", "results", "guidance", "concall", "interaction"];
+const kycWords = ["know your company", "all about my company", "corporate room", "earnings call", "quarterly"];
 
-// Set default date to today
 document.getElementById('searchDate').valueAsDate = new Date();
 
 async function runScan() {
     const key = document.getElementById("apikey").value.trim();
-    const selectedDate = document.getElementById("searchDate").value;
-    
-    if(!key) { alert("Please enter API Key"); return; }
-    if(!selectedDate) { alert("Please select a date"); return; }
+    const date = document.getElementById("searchDate").value;
+    if(!key) { alert("API Key Required"); return; }
 
-    const resultsDiv = document.getElementById("results");
-    resultsDiv.innerHTML = "Scanning all formats (Live + Uploads)...";
+    const resDiv = document.getElementById("results");
+    resDiv.innerHTML = "Performing Deep Scan...";
 
-    // Define the 24-hour window for the selected date
-    const startOfDay = new Date(selectedDate);
-    startOfDay.setHours(0,0,0,0);
-    const endOfDay = new Date(selectedDate);
-    endOfDay.setHours(23,59,59,999);
+    const start = new Date(date); start.setHours(0,0,0,0);
+    const end = new Date(date); end.setHours(23,59,59,999);
 
     let allVideos = [];
 
     for (let c of channels) {
-        // We use a blank query 'q' but strict filters to catch EVERYTHING on that day
-        const url = `https://www.googleapis.com/youtube/v3/search?key=${key}&channelId=${c.id}&part=snippet&order=date&maxResults=50&publishedAfter=${startOfDay.toISOString()}&publishedBefore=${endOfDay.toISOString()}`;
+        // We use a broad search for the day to catch 'Live' and 'Video' uploads
+        let url = `https://www.googleapis.com/youtube/v3/search?key=${key}&channelId=${c.id}&part=snippet&order=date&maxResults=50&publishedAfter=${start.toISOString()}&publishedBefore=${end.toISOString()}`;
 
         try {
             let res = await fetch(url);
@@ -76,39 +70,40 @@ async function runScan() {
 
             if (data.items) {
                 data.items.forEach(item => {
-                    const title = item.snippet.title;
-                    const isRelevant = goodWords.some(w => title.toLowerCase().includes(w));
+                    let title = item.snippet.title.toLowerCase();
                     
-                    // We also include "Live" content which many trackers miss
-                    if (isRelevant) {
+                    let isMgt = mgtWords.some(w => title.includes(w));
+                    let isKyc = kycWords.some(w => title.includes(w));
+
+                    if (isMgt || isKyc) {
                         allVideos.push({
                             channel: c.name,
-                            title: title,
-                            time: new Date(item.snippet.publishedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                            title: item.snippet.title,
+                            type: isKyc ? "Special Segment" : "Management",
                             link: `https://youtube.com/watch?v=${item.id.videoId}`
                         });
                     }
                 });
             }
-        } catch (e) { console.error("Error fetching " + c.name); }
+        } catch (e) { console.error(e); }
     }
 
-    // Sort by time (latest first)
+    // Render results
     let html = "";
     if (allVideos.length === 0) {
-        html = "<p class='small'>No management interviews found for this date. Channels might use different keywords or haven't uploaded yet.</p>";
+        html = "<p style='color:#666; font-size:13px'>No corporate interviews found. Note: If it's early morning, channels may not have uploaded yet.</p>";
     } else {
-        allVideos.forEach(x => {
+        allVideos.forEach(v => {
+            let tagClass = v.type === "Management" ? "tag-mgt" : "tag-kyc";
             html += `
             <div class="card">
-                <span class="ch-tag">${x.channel}</span>
-                <div class="title">${x.title}</div>
-                <span class='small'>Uploaded at: ${x.time}</span><br>
-                <a href="${x.link}" target="_blank">Watch Now →</a>
+                <span class="ch-name">${v.channel}</span> &nbsp; <span class="${tagClass}">${v.type}</span>
+                <div class="title">${v.title}</div>
+                <a href="${v.link}" target="_blank">Watch on YouTube →</a>
             </div>`;
         });
     }
-    resultsDiv.innerHTML = html;
+    resDiv.innerHTML = html;
 }
 </script>
 
