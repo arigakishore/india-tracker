@@ -2,33 +2,36 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>India Corporate Tracker</title>
+<title>India Corporate Smart Tracker</title>
 <style>
-body{font-family:'Segoe UI',sans-serif;background:#000;color:#fff;padding:15px}
+body{font-family:'Segoe UI',sans-serif;background:#000;color:#fff;padding:15px;line-height:1.5}
 .container{max-width:650px;margin:0 auto}
 button,input,select{width:100%;padding:14px;border:none;border-radius:12px;margin:8px 0;box-sizing:border-box}
-button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer}
+button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;transition:0.2s}
+button:hover{background:#1d4ed8}
 input,select{background:#111;color:#fff;border:1px solid #333}
 .card{background:#111;padding:16px;border-radius:16px;margin:12px 0;border:1px solid #222}
-.tag-mgt{background:#1e3a8a;color:#60a5fa;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;text-transform:uppercase}
-.tag-kyc{background:#365314;color:#bef264;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;text-transform:uppercase}
-.ch-name{color:#888; font-size:12px; font-weight:bold}
-.title{margin:10px 0; font-size:15px; font-weight:500; color:#eee}
-a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px}
+.tag{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;text-transform:uppercase;margin-bottom:8px;display:inline-block}
+.tag-mgt{background:#1e3a8a;color:#60a5fa}
+.tag-results{background:#581c87;color:#d8b4fe}
+.tag-special{background:#14532d;color:#bef264}
+.ch-name{color:#888; font-size:11px; font-weight:bold; text-transform:uppercase; letter-spacing:1px}
+.title{margin:5px 0 12px 0; font-size:15px; font-weight:500; color:#eee}
+a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px;border:1px solid #4da6ff;padding:6px 12px;border-radius:8px;display:inline-block}
 </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🏢 India Corporate Tracker</h2>
-    <div style="font-size:12px; color:#666; margin-bottom:15px">Capturing Management, Know Your Company, & Earnings</div>
+    <h2>📈 India Corporate Tracker</h2>
+    <div style="font-size:12px; color:#666; margin-bottom:15px">CEO • CFO • MD • Earnings • Special Segments</div>
 
     <input id="apikey" type="password" placeholder="Paste YouTube API Key">
     
     <label style="font-size:12px; color:#888">Select Search Date:</label>
     <input type="date" id="searchDate">
 
-    <button onclick="runScan()">Scan All Formats</button>
+    <button onclick="runScan()">Deep Scan Channels</button>
 
     <div id="results"></div>
 </div>
@@ -41,27 +44,39 @@ const channels = [
     { name: "ET NOW Swadesh", id: "UC9p6_Ksq7_K75W-V9S0M-pA" }
 ];
 
-// Refined keywords for Indian Business segment naming conventions
-const mgtWords = ["management", "ceo", "cfo", "md", "chairman", "results", "guidance", "concall", "interaction"];
-const kycWords = ["know your company", "all about my company", "corporate room", "earnings call", "quarterly"];
+// Expanded Executive Roles and Segment Names
+const executiveRoles = [
+    "ceo", "cfo", "md", "chairman", "director", "founder", "promoter", 
+    "executive", "president", "vp", "chief", "manager", "head of"
+];
+
+const corporateEvents = [
+    "management", "interaction", "interview", "results", "earnings", 
+    "q1", "q2", "q3", "q4", "guidance", "concall", "outlook", "briefing"
+];
+
+const specialSegments = [
+    "know your company", "all about my company", "corporate radar", 
+    "corporate room", "talking point", "market masters"
+];
 
 document.getElementById('searchDate').valueAsDate = new Date();
 
 async function runScan() {
     const key = document.getElementById("apikey").value.trim();
-    const date = document.getElementById("searchDate").value;
+    const dateStr = document.getElementById("searchDate").value;
     if(!key) { alert("API Key Required"); return; }
 
     const resDiv = document.getElementById("results");
-    resDiv.innerHTML = "Performing Deep Scan...";
+    resDiv.innerHTML = "Scanning for Executives and Corporate Actions...";
 
-    const start = new Date(date); start.setHours(0,0,0,0);
-    const end = new Date(date); end.setHours(23,59,59,999);
+    const start = new Date(dateStr); start.setHours(0,0,0,0);
+    const end = new Date(dateStr); end.setHours(23,59,59,999);
 
     let allVideos = [];
 
     for (let c of channels) {
-        // We use a broad search for the day to catch 'Live' and 'Video' uploads
+        // Fetching 50 results to ensure we don't miss buried interviews
         let url = `https://www.googleapis.com/youtube/v3/search?key=${key}&channelId=${c.id}&part=snippet&order=date&maxResults=50&publishedAfter=${start.toISOString()}&publishedBefore=${end.toISOString()}`;
 
         try {
@@ -72,34 +87,45 @@ async function runScan() {
                 data.items.forEach(item => {
                     let title = item.snippet.title.toLowerCase();
                     
-                    let isMgt = mgtWords.some(w => title.includes(w));
-                    let isKyc = kycWords.some(w => title.includes(w));
+                    // Regex helps find whole words only (prevents 'm' in 'market' triggering 'md')
+                    const hasRole = executiveRoles.some(role => new RegExp(`\\b${role}\\b`).test(title));
+                    const hasEvent = corporateEvents.some(evt => title.includes(evt));
+                    const hasSpec = specialSegments.some(seg => title.includes(seg));
 
-                    if (isMgt || isKyc) {
+                    if (hasRole || hasEvent || hasSpec) {
+                        let cat = "Management Interview";
+                        let cls = "tag-mgt";
+
+                        if(hasSpec) { cat = "Special Segment"; cls = "tag-special"; }
+                        else if(title.includes("q1") || title.includes("q2") || title.includes("q3") || title.includes("q4") || title.includes("results")) {
+                            cat = "Earnings/Results"; cls = "tag-results";
+                        }
+
                         allVideos.push({
                             channel: c.name,
                             title: item.snippet.title,
-                            type: isKyc ? "Special Segment" : "Management",
+                            category: cat,
+                            tagClass: cls,
                             link: `https://youtube.com/watch?v=${item.id.videoId}`
                         });
                     }
                 });
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Error fetching from " + c.name); }
     }
 
-    // Render results
     let html = "";
     if (allVideos.length === 0) {
-        html = "<p style='color:#666; font-size:13px'>No corporate interviews found. Note: If it's early morning, channels may not have uploaded yet.</p>";
+        html = "<p style='color:#666; font-size:13px; text-align:center;'>No corporate content found for this date.</p>";
     } else {
+        // Sort alphabetically by channel then category
         allVideos.forEach(v => {
-            let tagClass = v.type === "Management" ? "tag-mgt" : "tag-kyc";
             html += `
             <div class="card">
-                <span class="ch-name">${v.channel}</span> &nbsp; <span class="${tagClass}">${v.type}</span>
+                <span class="ch-name">${v.channel}</span><br>
+                <span class="tag ${v.tagClass}">${v.category}</span>
                 <div class="title">${v.title}</div>
-                <a href="${v.link}" target="_blank">Watch on YouTube →</a>
+                <a href="${v.link}" target="_blank">Watch Video →</a>
             </div>`;
         });
     }
