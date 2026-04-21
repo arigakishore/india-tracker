@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>India Tracker</title>
+<style>
+body{
+font-family:Arial,sans-serif;
+background:#000;
+color:#fff;
+margin:0;
+padding:15px;
+}
+.card{
+background:#111;
+padding:15px;
+border-radius:18px;
+margin-bottom:12px;
+}
+button{
+width:100%;
+padding:14px;
+border:none;
+border-radius:16px;
+font-size:18px;
+font-weight:bold;
+background:#fff;
+color:#000;
+}
+input{
+width:100%;
+padding:12px;
+border-radius:14px;
+border:none;
+margin:10px 0;
+font-size:16px;
+}
+.small{color:#aaa;font-size:14px;}
+a{color:#4da6ff;text-decoration:none;}
+</style>
+</head>
+<body>
+
+<h1>📈 India Tracker</h1>
+<div class="small">Management interviews from business channels</div>
+
+<input type="text" placeholder="Search company...">
+
+<button onclick="loadData()">Run Scan</button>
+
+<div id="results"></div>
+
+<script>
+function loadData(){
+document.getElementById('results').innerHTML = `
+<div class="card">
+<b>Infosys</b><br>
+Infosys CEO on AI demand outlook<br>
+<span class='small'>CNBC TV18 • Today</span><br><br>
+<a href='https://youtube.com' target='_blank'>Open YouTube</a>
+</div>
+
+<div class="card">
+<b>Dixon Technologies</b><br>
+Chairman on FY27 growth plans<br>
+<span class='small'>ET NOW • Today</span><br><br>
+<a href='https://youtube.com' target='_blank'>Open YouTube</a>
+</div>
+
+<div class="card">
+<b>Bajaj Finance</b><br>
+Management discusses quarterly results<br>
+<span class='small'>NDTV Profit • Today</span><br><br>
+<a href='https://youtube.com' target='_blank'>Open YouTube</a>
+</div>
+`;
+}
+</script>
+
+</body>
+</html>
