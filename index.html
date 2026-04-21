@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>India Tracker Live</title>
+<title>India Smart Tracker</title>
 <style>
 body{font-family:Arial;background:#000;color:#fff;padding:15px}
 button,input{width:100%;padding:14px;border:none;border-radius:14px;margin:8px 0}
@@ -14,47 +14,92 @@ a{color:#4da6ff}
 </head>
 <body>
 
-<h2>📈 India Tracker Live</h2>
+<h2>📈 India Smart Tracker</h2>
+<div class="small">Management • Stocks • Commodities</div>
 
 <input id="apikey" placeholder="Paste YouTube API Key">
-<button onclick="runScan()">Run Live Scan</button>
+<button onclick="runScan()">Run Smart Scan</button>
 
 <div id="results"></div>
 
 <script>
 const channels = [
-{ name:"CNBC TV18", id:"UCvJJ_dzjViJCoLf5uKUTwoA"},
+{ name:"CNBC TV18", id:"UCmRbHAgG2k2vDUvb3xsEunQ"},
 { name:"ET NOW", id:"UC6RJ7-PaXg6TIH2BzZfTV7w"},
 { name:"NDTV Profit", id:"UC3uJIdRFTGgLWrUziaHbzrg"}
 ];
 
+const goodWords = [
+"ceo","cfo","md","chairman","promoter","management",
+"results","q1","q2","q3","q4","earnings","guidance",
+"stock","shares","buy","sell","target","nifty","sensex",
+"gold","silver","crude","copper","gas","commodity",
+"ipo","outlook","brokerage","market"
+];
+
+const badWords = [
+"trump","election","crime","bollywood","sports",
+"weather","war","celebrity","movie"
+];
+
+function useful(title){
+let t = title.toLowerCase();
+
+let good = goodWords.some(w => t.includes(w));
+let bad = badWords.some(w => t.includes(w));
+
+return good && !bad;
+}
+
 async function runScan(){
+
 let key=document.getElementById("apikey").value.trim();
 if(!key){alert("Paste API key"); return;}
 
-let out="";
-document.getElementById("results").innerHTML="Loading...";
+document.getElementById("results").innerHTML="Scanning...";
+
+let all=[];
 
 for(let c of channels){
-let url=`https://www.googleapis.com/youtube/v3/search?key=${key}&channelId=${c.id}&part=snippet&order=date&maxResults=5&type=video`;
+
+let url=`https://www.googleapis.com/youtube/v3/search?key=${key}&channelId=${c.id}&part=snippet&order=date&maxResults=10&type=video`;
 
 let res=await fetch(url);
 let data=await res.json();
 
 if(data.items){
 for(let v of data.items){
-out += `
-<div class="card">
-<b>${c.name}</b><br>
-${v.snippet.title}<br>
-<span class='small'>${v.snippet.publishedAt}</span><br><br>
-<a href="https://youtube.com/watch?v=${v.id.videoId}" target="_blank">Open YouTube</a>
-</div>`;
+
+let title=v.snippet.title;
+
+if(useful(title)){
+all.push({
+channel:c.name,
+title:title,
+date:v.snippet.publishedAt,
+link:`https://youtube.com/watch?v=${v.id.videoId}`
+});
+}
 }
 }
 }
 
-document.getElementById("results").innerHTML=out || "No results";
+all.sort((a,b)=> new Date(b.date)-new Date(a.date));
+
+let out="";
+
+for(let x of all){
+out += `
+<div class="card">
+<b>${x.channel}</b><br>
+${x.title}<br>
+<span class='small'>${x.date}</span><br><br>
+<a href="${x.link}" target="_blank">Open YouTube</a>
+</div>`;
+}
+
+document.getElementById("results").innerHTML = out || "No relevant investor videos found.";
+
 }
 </script>
 
