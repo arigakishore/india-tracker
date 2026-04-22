@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>India Smart Tracker: Corporate & Analysis</title>
+<title>India Smart Tracker: Full Market Intelligence</title>
 <style>
 body{font-family:'Segoe UI',sans-serif;background:#000;color:#fff;padding:15px;line-height:1.5}
 .container{max-width:650px;margin:0 auto}
@@ -11,8 +11,9 @@ button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer}
 input,select{background:#111;color:#fff;border:1px solid #333}
 .card{background:#111;padding:16px;border-radius:16px;margin:12px 0;border:1px solid #222}
 .tag{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;text-transform:uppercase;margin-bottom:8px;display:inline-block}
-.tag-mgt{background:#1e3a8a;color:#60a5fa} /* Management */
-.tag-analysis{background:#92400e;color:#fde68a} /* Stock Reasons/Analysis */
+.tag-mgt{background:#1e3a8a;color:#60a5fa} /* Management/Results */
+.tag-strategy{background:#5b21b6;color:#ddd6fe} /* Vedanta/Value Unlocking style */
+.tag-analysis{background:#92400e;color:#fde68a} /* Amara Raja/3 Reasons style */
 .tag-special{background:#14532d;color:#bef264} /* KYC */
 .ch-name{color:#888; font-size:11px; font-weight:bold; text-transform:uppercase}
 .title{margin:5px 0 12px 0; font-size:15px; font-weight:500; color:#eee}
@@ -23,14 +24,14 @@ a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px;border:1px 
 
 <div class="container">
     <h2>📈 India Smart Tracker</h2>
-    <div style="font-size:12px; color:#666; margin-bottom:15px">Interviews • Capex • Order Wins • Stock Analysis</div>
+    <div style="font-size:12px; color:#666; margin-bottom:15px">Interviews • Results • Value Unlocking • Tailwinds</div>
 
     <input id="apikey" type="password" placeholder="Paste YouTube API Key">
     
     <label style="font-size:12px; color:#888">Select Search Date:</label>
     <input type="date" id="searchDate">
 
-    <button onclick="runScan()">Scan Market Data</button>
+    <button onclick="runScan()">Scan Market Intelligence</button>
 
     <div id="results"></div>
 </div>
@@ -43,12 +44,11 @@ const channels = [
     { name: "ET NOW Swadesh", pId: "UU9p6_Ksq7_K75W-V9S0M-pA" }
 ];
 
-// Group 1: People & Results
-const mgtTriggers = ["ceo", "cfo", "md", "chairman", "management", "interaction", "interview", "earnings", "results", "q1", "q2", "q3", "q4"];
-// Group 2: Stock Analysis & Specific Corporate Actions (Like your Amara Raja video)
-const analysisTriggers = ["reasons why", "share price", "jumps", "falls", "surges", "capex", "order win", "deal", "stake sale", "block deal", "brokerage"];
-// Group 3: Educational/Deep Dives
-const kycTriggers = ["know your company", "all about my company", "corporate radar"];
+// Trigger Groups
+const mgt = ["ceo", "cfo", "md", "chairman", "management", "interaction", "interview", "results", "earnings", "q1", "q2", "q3", "q4"];
+const strategy = ["unlock", "tailwinds", "upside", "demerger", "potential", "trigger", "outlook", "re-rating"];
+const action = ["reasons why", "share price", "jumps", "falls", "surges", "capex", "order win", "deal", "stake sale", "brokerage"];
+const kyc = ["know your company", "all about my company", "corporate radar"];
 
 document.getElementById('searchDate').valueAsDate = new Date();
 
@@ -58,7 +58,7 @@ async function runScan() {
     if(!key) { alert("API Key Required"); return; }
 
     const resDiv = document.getElementById("results");
-    resDiv.innerHTML = "Scanning for Corporate Actions & Analysis...";
+    resDiv.innerHTML = "Performing Deep Keyword Scan...";
 
     let allVideos = [];
 
@@ -74,16 +74,18 @@ async function runScan() {
                     let title = item.snippet.title.toLowerCase();
                     let pubDate = item.snippet.publishedAt.substring(0, 10);
                     
-                    const isMgt = mgtTriggers.some(t => title.includes(t));
-                    const isAnalysis = analysisTriggers.some(t => title.includes(t));
-                    const isKyc = kycTriggers.some(t => title.includes(t));
+                    const isMgt = mgt.some(t => title.includes(t));
+                    const isStrat = strategy.some(t => title.includes(t));
+                    const isAct = action.some(t => title.includes(t));
+                    const isKyc = kyc.some(t => title.includes(t));
 
-                    if (pubDate === dateStr && (isMgt || isAnalysis || isKyc)) {
+                    if (pubDate === dateStr && (isMgt || isStrat || isAct || isKyc)) {
                         let cat = "Management Interview";
                         let cls = "tag-mgt";
 
                         if(isKyc) { cat = "Special Segment"; cls = "tag-special"; }
-                        else if(isAnalysis) { cat = "Stock Analysis"; cls = "tag-analysis"; }
+                        else if(isStrat) { cat = "Strategy & Tailwinds"; cls = "tag-strategy"; }
+                        else if(isAct) { cat = "Stock Analysis"; cls = "tag-analysis"; }
 
                         allVideos.push({
                             channel: c.name,
