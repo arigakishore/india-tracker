@@ -2,17 +2,18 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>India Corporate Smart Tracker</title>
+<title>India Smart Tracker: Corporate & Analysis</title>
 <style>
-body{font-family:'Segoe UI',sans-serif;background:#000;color:#fff;padding:15px}
+body{font-family:'Segoe UI',sans-serif;background:#000;color:#fff;padding:15px;line-height:1.5}
 .container{max-width:650px;margin:0 auto}
 button,input,select{width:100%;padding:14px;border:none;border-radius:12px;margin:8px 0;box-sizing:border-box}
 button{background:#2563eb;color:#fff;font-weight:bold;cursor:pointer}
 input,select{background:#111;color:#fff;border:1px solid #333}
 .card{background:#111;padding:16px;border-radius:16px;margin:12px 0;border:1px solid #222}
 .tag{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:bold;text-transform:uppercase;margin-bottom:8px;display:inline-block}
-.tag-target{background:#1e3a8a;color:#60a5fa} /* Interviews/Results */
-.tag-segment{background:#14532d;color:#bef264} /* KYC/Special */
+.tag-mgt{background:#1e3a8a;color:#60a5fa} /* Management */
+.tag-analysis{background:#92400e;color:#fde68a} /* Stock Reasons/Analysis */
+.tag-special{background:#14532d;color:#bef264} /* KYC */
 .ch-name{color:#888; font-size:11px; font-weight:bold; text-transform:uppercase}
 .title{margin:5px 0 12px 0; font-size:15px; font-weight:500; color:#eee}
 a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px;border:1px solid #4da6ff;padding:6px 12px;border-radius:8px;display:inline-block}
@@ -21,15 +22,15 @@ a{color:#4da6ff;text-decoration:none;font-weight:bold;font-size:14px;border:1px 
 <body>
 
 <div class="container">
-    <h2>📈 India Corporate Tracker</h2>
-    <div style="font-size:12px; color:#666; margin-bottom:15px">CEO • CFO • MD • Specific Stock Actions</div>
+    <h2>📈 India Smart Tracker</h2>
+    <div style="font-size:12px; color:#666; margin-bottom:15px">Interviews • Capex • Order Wins • Stock Analysis</div>
 
     <input id="apikey" type="password" placeholder="Paste YouTube API Key">
     
     <label style="font-size:12px; color:#888">Select Search Date:</label>
     <input type="date" id="searchDate">
 
-    <button onclick="runScan()">Scan All Critical Content</button>
+    <button onclick="runScan()">Scan Market Data</button>
 
     <div id="results"></div>
 </div>
@@ -42,11 +43,12 @@ const channels = [
     { name: "ET NOW Swadesh", pId: "UU9p6_Ksq7_K75W-V9S0M-pA" }
 ];
 
-// Keywords we WANT (Company-specific and Executive-specific)
-const goodWords = ["ceo", "cfo", "md", "chairman", "director", "management", "results", "earnings", "guidance", "q1", "q2", "q3", "q4", "know your company", "all about my company", "concall", "interaction"];
-
-// Keywords we DON'T want (Generic news bulletins that hide specific interviews)
-const badWords = ["business news", "top news", "market news", "closing bell", "opening bell", "daily news", "news bulletin", "headlines"];
+// Group 1: People & Results
+const mgtTriggers = ["ceo", "cfo", "md", "chairman", "management", "interaction", "interview", "earnings", "results", "q1", "q2", "q3", "q4"];
+// Group 2: Stock Analysis & Specific Corporate Actions (Like your Amara Raja video)
+const analysisTriggers = ["reasons why", "share price", "jumps", "falls", "surges", "capex", "order win", "deal", "stake sale", "block deal", "brokerage"];
+// Group 3: Educational/Deep Dives
+const kycTriggers = ["know your company", "all about my company", "corporate radar"];
 
 document.getElementById('searchDate').valueAsDate = new Date();
 
@@ -56,7 +58,7 @@ async function runScan() {
     if(!key) { alert("API Key Required"); return; }
 
     const resDiv = document.getElementById("results");
-    resDiv.innerHTML = "Performing Metadata Filtering...";
+    resDiv.innerHTML = "Scanning for Corporate Actions & Analysis...";
 
     let allVideos = [];
 
@@ -72,18 +74,22 @@ async function runScan() {
                     let title = item.snippet.title.toLowerCase();
                     let pubDate = item.snippet.publishedAt.substring(0, 10);
                     
-                    const isDateMatch = (pubDate === dateStr);
-                    const hasGoodWord = goodWords.some(w => title.includes(w));
-                    const hasBadWord = badWords.some(w => title.includes(w));
+                    const isMgt = mgtTriggers.some(t => title.includes(t));
+                    const isAnalysis = analysisTriggers.some(t => title.includes(t));
+                    const isKyc = kycTriggers.some(t => title.includes(t));
 
-                    // Keep if: Correct Date AND (Has a target word) AND (Does NOT have a generic news word)
-                    if (isDateMatch && hasGoodWord && !hasBadWord) {
-                        let isSpec = title.includes("know your company") || title.includes("all about my company");
+                    if (pubDate === dateStr && (isMgt || isAnalysis || isKyc)) {
+                        let cat = "Management Interview";
+                        let cls = "tag-mgt";
+
+                        if(isKyc) { cat = "Special Segment"; cls = "tag-special"; }
+                        else if(isAnalysis) { cat = "Stock Analysis"; cls = "tag-analysis"; }
+
                         allVideos.push({
                             channel: c.name,
                             title: item.snippet.title,
-                            category: isSpec ? "Special Segment" : "Management/Results",
-                            tagClass: isSpec ? "tag-segment" : "tag-target",
+                            category: cat,
+                            tagClass: cls,
                             link: `https://youtube.com/watch?v=${item.snippet.resourceId.videoId}`
                         });
                     }
@@ -94,7 +100,7 @@ async function runScan() {
 
     let html = "";
     if (allVideos.length === 0) {
-        html = "<p style='color:#666; font-size:13px; text-align:center;'>No specific company content found for this date.</p>";
+        html = "<p style='color:#666; font-size:13px; text-align:center;'>No matching stock content found for this date.</p>";
     } else {
         allVideos.forEach(v => {
             html += `
